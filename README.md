@@ -4,7 +4,7 @@
 
 
 # 新增代码主要位于soot.jimple.spark.solver.myreflection包下 
-可重点关注soot.jimple.spark.solver.myreflection.MyReflectionModel类的实现
+核心实现逻辑在soot.jimple.spark.solver.myreflection.MyReflectionModel类中
 目前已通过 Inheritance
        DuplicateName
         ArgsRefine
