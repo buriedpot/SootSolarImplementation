@@ -4,11 +4,14 @@
 
 
 # 新增代码主要位于soot.jimple.spark.solver.myreflection包下 
-# 可重点关注soot.jimple.spark.solver.myreflection.MyReflectionModel类的实现
+可重点关注soot.jimple.spark.solver.myreflection.MyReflectionModel类的实现
 目前已通过 Inheritance
        DuplicateName
         ArgsRefine
         Basic测试用例。
+测试入口在src/test/java/neu/lab/tool/test/SparkMain.java，可进入各个函数定义阅读理解。
+
+**主要困难**：目前在RecvType测试用例没法正常传播String对象。此外，没完全实现getMethods。
 
  
 
