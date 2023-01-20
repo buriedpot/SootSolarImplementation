@@ -23,25 +23,45 @@
 package soot.jimple.spark.solver.myreflection;
 
 
+import com.google.common.math.Quantiles;
+import soot.Scene;
+import soot.jimple.spark.pag.PAG;
 import soot.jimple.spark.pag.VarNode;
 import soot.jimple.spark.sets.PointsToSetInternal;
+import soot.jimple.spark.solver.PropSolar;
 import soot.jimple.spark.solver.Propagator;
+import soot.jimple.toolkits.callgraph.Edge;
 
 public class MyReflectionAnalysis {
 
-    private Propagator solver;
+    private PropSolar solver;
 
+    private PAG pag;
 
     private MyReflectionModel model;
 
 
-    public MyReflectionAnalysis setPropagator(Propagator solver) {
+    public MyReflectionAnalysis setPropagator(PropSolar solver) {
+        this.solver = solver;
+        this.model.setPag(solver.getPag());
+        this.model.setPropagator(solver);
+        this.pag = solver.getPag();
+        return this;
+    }
+
+
+    public MyReflectionAnalysis setSolver(PropSolar solver) {
         this.solver = solver;
         return this;
     }
 
     public MyReflectionAnalysis() {
-        this.model = new MyReflectionModel();
+
+    }
+    public MyReflectionAnalysis(PropSolar propagator) {
+        this.solver = propagator;
+        this.pag = propagator.getPag();
+        this.model = new MyReflectionModel(propagator);
     }
 
     public void onNewPointsToSet(VarNode varNode, PointsToSetInternal pts) {
@@ -51,7 +71,9 @@ public class MyReflectionAnalysis {
     }
 
 
-
-
-
+    public void addEdges() {
+        for (Edge edge : model.edges) {
+            Scene.v().getCallGraph().addEdge(edge);
+        }
+    }
 }

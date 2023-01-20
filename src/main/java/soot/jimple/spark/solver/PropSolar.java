@@ -42,7 +42,7 @@ import java.util.*;
 public class PropSolar extends Propagator {
   private static final Logger logger = LoggerFactory.getLogger(PropSolar.class);
   protected final Set<VarNode> varNodeWorkList = new TreeSet<VarNode>();
-  public MyReflectionAnalysis myReflectionAnalysis = new MyReflectionAnalysis();
+  public MyReflectionAnalysis myReflectionAnalysis;
 
   public void addVarNodePointsTo(VarNode node, Node obj) {
     node.getP2Set().getNewSet().add(obj);
@@ -53,6 +53,9 @@ public class PropSolar extends Propagator {
     VarNode node = pag.makeLocalVarNode(value, value.getType(), container);
     node.getP2Set().getNewSet().add(obj);
     varNodeWorkList.add(node);
+  }
+  public void addVarNodeToWorkList(VarNode varNode) {
+    varNodeWorkList.add(varNode);
   }
 
 
@@ -69,6 +72,8 @@ public class PropSolar extends Propagator {
     }
 
     boolean verbose = pag.getOpts().verbose();
+    myReflectionAnalysis = new MyReflectionAnalysis(this);
+
     do {
       if (verbose) {
         logger.debug("Worklist has " + varNodeWorkList.size() + " nodes.");
@@ -119,6 +124,8 @@ public class PropSolar extends Propagator {
         nDotF.flushNew();
       }
     } while (!varNodeWorkList.isEmpty());
+
+    myReflectionAnalysis.addEdges();
   }
 
   /* End of public methods. */
@@ -336,4 +343,8 @@ public class PropSolar extends Propagator {
 
   protected PAG pag;
   protected OnFlyCallGraph ofcg;
+
+  public PAG getPag() {
+    return pag;
+  }
 }

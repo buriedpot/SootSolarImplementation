@@ -22,20 +22,17 @@
 package soot.jimple.spark.solver.myreflection;
 
 import soot.*;
-import soot.jimple.ClassConstant;
-import soot.jimple.InstanceInvokeExpr;
-import soot.jimple.InvokeExpr;
-import soot.jimple.Stmt;
+import soot.jimple.*;
+import soot.jimple.internal.JArrayRef;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JInvokeStmt;
-import soot.jimple.spark.pag.AllocNode;
-import soot.jimple.spark.pag.Node;
-import soot.jimple.spark.pag.PAG;
-import soot.jimple.spark.pag.VarNode;
+import soot.jimple.spark.pag.*;
 import soot.jimple.spark.sets.P2SetVisitor;
 import soot.jimple.spark.sets.PointsToSetInternal;
 import soot.jimple.spark.solver.PropSolar;
 import soot.jimple.spark.solver.myreflection.utils.CSObjs;
+import soot.jimple.spark.solver.myreflection.utils.SootUtil;
+import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.callgraph.ReflectionModel;
 import soot.tagkit.Host;
 import soot.tagkit.LinkTag;
@@ -44,20 +41,19 @@ import soot.util.HashMultiMap;
 import soot.util.MultiMap;
 import soot.util.queue.QueueReader;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MyReflectionModel implements ReflectionModel {
 
     protected static final int BASE = -1;
 
     public static final String UNKNOWN_CLASS = "#UnknownClass";
+    public static final String ARRAY_LENGTH = "#ArrayLength";
 
     public PAG pag;
 
     public PropSolar propagator;
+    public List<Edge> edges = new ArrayList<>();
 
 
     protected final Map<SootMethod, int[]> relevantVarIndexes = new HashMap<>();
@@ -67,6 +63,15 @@ public class MyReflectionModel implements ReflectionModel {
 
     protected void registerRelevantVarIndexes(SootMethod api, int... indexes) {
         relevantVarIndexes.put(api, indexes);
+    }
+
+
+    public MyReflectionModel(PropSolar propagator) {
+        this.propagator = propagator;
+        this.pag = propagator.getPag();
+        registerVarAndHandler();
+
+        handleAllInvokes();
     }
 
     public void handleAllInvokes() {
@@ -81,13 +86,43 @@ public class MyReflectionModel implements ReflectionModel {
                     });
         }
     }
-
-
+    public void handleAllArrayStore() {
+        QueueReader<MethodOrMethodContext> listener = Scene.v().getReachableMethods().listener();
+        while (listener.hasNext()) {
+            MethodOrMethodContext next = listener.next();
+            SootMethod currentMethod = next.method();
+            currentMethod.retrieveActiveBody().getUnits().stream()
+                    .filter(unit -> (unit instanceof JAssignStmt))
+                    .forEach(unit -> {
+                        JAssignStmt arrayStoreStmt = (JAssignStmt) unit;
+                        if (arrayStoreStmt.getLeftOp() instanceof ArrayRef) {
+                            JArrayRef arrayRef = (JArrayRef) arrayStoreStmt.getLeftOp();
+                            Value base = arrayRef.getBase();
+                            LocalVarNode baseVarNode = pag.findLocalVarNode(base);
+//                            baseVarNode.getAllFieldRefs().stream().filter(fieldRefNode -> {fieldRefNode instanceof ArrayElement}).forEach(fieldRef -> {
+//                                Value rightOp = arrayStoreStmt.getRightOp();
+//                                VarNode rVarNode = pag.findLocalVarNode(rightOp);
+//                                rVarNode = rVarNode == null ? pag.findGlobalVarNode(rightOp) : rVarNode;
+//                                rVarNode = rVarNode == null ? pag.makeLocalVarNode(rightOp,
+//                                        rightOp.getType(), currentMethod) : rVarNode;
+//                                fieldRef.makeP2Set().add(rVarNode);
+////                                propagator.addVarNodeToWorkList(fieldRef);
+//                            });
+                        }
+                    });
+        }
+    }
 
 
     protected void registerVarAndHandler() {
         SootMethod classForName = Scene.v().getMethod("<java.lang.Class: java.lang.Class forName(java.lang.String)>");
         registerRelevantVarIndexes(classForName, 0);
+
+        SootMethod getMethod = Scene.v().getMethod("<java.lang.Class: java.lang.reflect.Method getMethod(java.lang.String,java.lang.Class[])>");
+        registerRelevantVarIndexes(getMethod, BASE, 0);
+
+        SootMethod methodInvoke = Scene.v().getMethod("<java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>");
+        registerRelevantVarIndexes(methodInvoke, BASE, 0);
     }
 
     private void registerAPIHandler(SootMethod classForName, Object o) {
@@ -118,7 +153,7 @@ public class MyReflectionModel implements ReflectionModel {
         }
         SootMethod target = invokeExpr.getMethod();
         if (target != null) {
-            int [] indexes = relevantVarIndexes.get(target);
+            int[] indexes = relevantVarIndexes.get(target);
             if (indexes != null) {
                 for (int i : indexes) {
                     relevantVars.put(getArg(container, invokeExpr, i), stmt);
@@ -163,7 +198,17 @@ public class MyReflectionModel implements ReflectionModel {
         Value value = (i == BASE) ?
                 ((InstanceInvokeExpr) invokeExpr).getBase() :
                 invokeExpr.getArg(i);
-        return pag.makeLocalVarNode(value, value.getType(), container);
+//        if (value instanceof StringConstant) {
+//            return pag.makeGlobalVarNode(pag.makeStringConstantNode(((StringConstant) value).value), RefType.v("java.lang.String"));
+//        }
+        LocalVarNode localVarNode = pag.findLocalVarNode(value);
+
+        LocalVarNode result = pag.makeLocalVarNode(value, value.getType(), container);
+        if (localVarNode == null && value instanceof StringConstant) {
+            result.makeP2Set().add(pag.makeStringConstantNode(((StringConstant) value).value));
+            propagator.addVarNodeToWorkList(result);
+        }
+        return result;
     }
 
     @Override
@@ -200,6 +245,8 @@ public class MyReflectionModel implements ReflectionModel {
     }
 
 
+
+
     /**
      * 类名称
      *
@@ -212,7 +259,6 @@ public class MyReflectionModel implements ReflectionModel {
         if (!(stmt instanceof JAssignStmt)) {
             return;
         }
-        SootMethod container = getContainer(varNode);
 
         Value leftOp = ((JAssignStmt) stmt).getLeftOp();
         pts.forall(new P2SetVisitor() {
@@ -223,7 +269,9 @@ public class MyReflectionModel implements ReflectionModel {
                     AllocNode unknownClassObj = pag.makeStringConstantNode(UNKNOWN_CLASS);
 //                    Obj clsObj = heapModel.getConstantObj(ClassLiteral.get(unknown));
 //                    CSObj csObj = csManager.getCSObj(defaultHctx, clsObj);
-                    propagator.addValuePointsTo(container, leftOp, unknownClassObj);
+                    LocalVarNode clzVarNode = pag.findLocalVarNode(leftOp);
+                    clzVarNode.makeP2Set().getNewSet().add(unknownClassObj);
+                    propagator.addVarNodeToWorkList(clzVarNode);
                     return;
                 }
                 SootClass klass = Scene.v().getSootClassUnsafe(className, true);
@@ -238,7 +286,9 @@ public class MyReflectionModel implements ReflectionModel {
                     // 这里ClassConstant
                     AllocNode classObj = pag.makeClassConstantNode(ClassConstant.v(className));
                     //  CSObj csObj = csManager.getCSObj(defaultHctx, clsObj);
-                    propagator.addValuePointsTo(container, leftOp, classObj);
+                    LocalVarNode clzVarNode = pag.findLocalVarNode(leftOp);
+                    clzVarNode.makeP2Set().getNewSet().add(classObj);
+                    propagator.addVarNodeToWorkList(clzVarNode);
 
                 }
             }
@@ -258,16 +308,211 @@ public class MyReflectionModel implements ReflectionModel {
             if (target != null) {
                 if ("<java.lang.Class: java.lang.Class forName(java.lang.String)>".equals(target.getSignature())) {
                     classForName(varNode, pointsToSet, invokeRelatedStmt);
+                } else if ("<java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>".equals(target.getSignature())) {
+                    methodInvoke(varNode, pointsToSet, invokeRelatedStmt);
+                } else if ("<java.lang.Class: java.lang.reflect.Method getMethod(java.lang.String,java.lang.Class[])>"
+                        .equals(target.getSignature())) {
+                    getMethod(varNode, pointsToSet, invokeRelatedStmt);
                 }
-                else if ("<java.lang.Class: java.lang.Class forName(java.lang.String)>".equals(target.getSignature())){
-
-                }
-
             }
         });
 
     }
 
+    private void methodInvoke(VarNode varNode, PointsToSetInternal pointsToSet, Stmt stmt) {
+
+        // 有左值的才有意义，不然获取类干啥
+        if (!(stmt instanceof JAssignStmt || stmt instanceof JInvokeStmt)) {
+            return;
+        }
+        InstanceInvokeExpr invokeExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
+
+//        Context context = csVar.getContext();
+
+        Value mVal = invokeExpr.getBase();
+        Value recvVal = invokeExpr.getArg(0);
+        Value argsVal = invokeExpr.getArg(1);
+
+        LocalVarNode mVarNode = pag.findLocalVarNode(mVal);
+        SootMethod container = mVarNode.getMethod();
+        VarNode recvVarNode = pag.makeLocalVarNode(mVal, mVal.getType(), container);
+        VarNode argsVarNode = pag.findLocalVarNode(argsVal);
+
+        List<PointsToSetInternal> args = getArgs(container, varNode, pointsToSet, invokeExpr, BASE, 0, 1);
+        PointsToSetInternal mtdObjs = args.get(0);
+        PointsToSetInternal recvObjs = args.get(1);
+        PointsToSetInternal argsObjs = args.get(2);
+
+//        List<String> allPossibleA = getMethodInvokeCastTargetClass(invoke.getLValue());
+        List<String> allPossibleTr = new ArrayList<>();
+        if (stmt instanceof JAssignStmt) {
+            JAssignStmt jAssignStmt = (JAssignStmt) stmt;
+            List<String> allPossibleA = SootUtil.getInstance().getMethodInvokeCastTargetClass(container, jAssignStmt.getLeftOp());
+            allPossibleTr = SootUtil.getInstance().getThisAndAllRelatedClasses(allPossibleA);
+        }
+        if (allPossibleTr.size() == 0) allPossibleTr.add(null);
+
+
+        List<String> finalAllPossibleTr = allPossibleTr;
+        List<String> finalAllPossibleTr1 = allPossibleTr;
+        mtdObjs.forall(new P2SetVisitor() {
+            @Override
+            public void visit(Node n) {
+                if (n instanceof UJMethod) {
+                    UJMethod ujMethod = (UJMethod) n;
+                    if (ujMethod.isKnown()) {
+                        List<SootMethod> allPossibleSootMethod = SootUtil.getInstance().MTD(ujMethod);
+                        for (SootMethod possibleTarget : allPossibleSootMethod) {
+                            if (possibleTarget.isStatic()) {
+                                edges.add(new Edge(container, stmt, possibleTarget, Kind.STATIC));
+                            }
+                            else {
+                                recvObjs.forall(new P2SetVisitor() {
+                                    @Override
+                                    public void visit(Node n) {
+                                        edges.add(new Edge(container, stmt, possibleTarget, Kind.VIRTUAL));
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    if (ujMethod.isDeclaringClassUnknown()) {
+                        recvObjs.forall(new P2SetVisitor() {
+                            @Override
+                            public void visit(Node n) {
+                                String possibleDeclaringClass = n.getType().toString();
+                                UJMethod inferResult = new UJMethod(pag, ujMethod);
+                                inferResult.setDeclaringClass(possibleDeclaringClass);
+                                mVarNode.makeP2Set().add(inferResult);
+                            }
+                        });
+                    }
+
+                    if (ujMethod.isDeclaringClassUnknown() && !ujMethod.isSubsignatureUnknown()) {
+                        boolean[] hasUnknownTypeObject = {false};
+                        recvObjs.forall(new P2SetVisitor() {
+                            @Override
+                            public void visit(Node n) {
+                                if (CSObjs.isUnknownClassObj(n)) {
+                                    hasUnknownTypeObject[0] = true;
+                                }
+                            }
+                        });
+
+                        if (hasUnknownTypeObject[0]) {
+                            if (ujMethod.isReturnTypeUnknown() || finalAllPossibleTr1.contains(ujMethod.returnType())) {
+                                // 利用methodName和一会儿推导出来的ptp，来推测可能的定义类
+                                if (!ujMethod.isMethodNameUnknown()) {
+                                    List<String> arrTypes = new ArrayList<String>();
+                                    List<Integer> argsLengths = new ArrayList<>();
+                                    calculatePossibleArrayElementTypes(argsObjs, argsLengths, arrTypes);
+                                    List<List<String>> ptpResult = new ArrayList<>();
+                                    for (Integer argsLength : argsLengths) {
+                                        ptpResult.addAll(SootUtil.getInstance().ptp3(arrTypes, argsLength));
+
+                                    }
+
+                                    if (!ujMethod.isParametersUnknown() && SootUtil.getInstance().belongsToPtp(ujMethod.parameters(), ptpResult)) {
+                                        Set<String> possibleDeclaringClasses = SootUtil.getInstance().M(ujMethod.returnType(), ujMethod.methodName(), ujMethod.parameters());
+                                        for (String possibleDeclaringClass : possibleDeclaringClasses) {
+                                            UJMethod inferResult = new UJMethod(pag, ujMethod);
+                                            ujMethod.setDeclaringClass(possibleDeclaringClass);
+                                            mtdObjs.add(ujMethod);
+                                        }
+                                    }
+                                }
+
+
+                            }
+                        }
+                    }
+                    // m−u ∈ pt(m)
+                    // ------------------------
+                    //pt(m) ⊇ { m−s | s.p ∈ Ptp(args), s.tr ≪: A, s.nm = u}
+                    //[I-InvSig]
+                    if (ujMethod.isParametersUnknown()) {
+                        List<String> tmpArrTypes = new ArrayList<>();
+                        List<Integer> argsLengths = new ArrayList<>();
+                        calculatePossibleArrayElementTypes(argsObjs, argsLengths, tmpArrTypes);
+                        List<String> arrTypes = new ArrayList<>(new HashSet<>(tmpArrTypes));
+                        List<List<String>> ptpResult = new ArrayList<>();
+                        for (Integer argsLength : argsLengths) {
+                            ptpResult.addAll(SootUtil.getInstance().ptp3(arrTypes, argsLength));
+                        }
+                        for (List<String> onePtp : ptpResult) {
+                            for (String oneTr : finalAllPossibleTr) {
+                                // 构造m-s
+                                UJMethod inferResult = new UJMethod(pag, ujMethod);
+                                inferResult.setReturnType(oneTr);
+                                inferResult.setParameters(onePtp);
+                                mVarNode.makeP2Set().add(inferResult);
+                            }
+                        }
+                    }
+
+                }
+            }
+        });
+        if (!mVarNode.makeP2Set().getNewSet().isEmpty()) {
+            propagator.addVarNodeToWorkList(mVarNode);
+        }
+    }
+
+    private void getMethod(VarNode varNode, PointsToSetInternal pointsToSet, Stmt stmt) {
+        // 有左值的才有意义，不然获取方法干啥
+        if (!(stmt instanceof JAssignStmt)) {
+            return;
+        }
+        JAssignStmt jAssignStmt = (JAssignStmt) stmt;
+        InstanceInvokeExpr invokeExpr = (InstanceInvokeExpr) jAssignStmt.getInvokeExpr();
+
+        Value mVal = jAssignStmt.getLeftOp();
+        Value clzVal = invokeExpr.getBase();
+        Value mNameVal = invokeExpr.getArg(0);
+
+        LocalVarNode clzVarNode = pag.findLocalVarNode(clzVal);
+        SootMethod container = clzVarNode.getMethod();
+        VarNode mVarNode = pag.makeLocalVarNode(mVal, mVal.getType(), container);
+        VarNode mNameVarNode = pag.findLocalVarNode(mNameVal);
+        if (mNameVarNode == null/* && mNameVal instanceof StringConstant*/) {
+            mNameVarNode = pag.makeLocalVarNode(mNameVal, mNameVal.getType(), container);
+            mNameVarNode.makeP2Set().getNewSet().add(pag.makeStringConstantNode(((StringConstant) mNameVal).value));
+            propagator.addVarNodeToWorkList(mNameVarNode);
+            this.relevantVars.put(mNameVarNode, stmt);
+        }
+
+        List<PointsToSetInternal> args = getArgs(container, varNode, pointsToSet, invokeExpr, BASE, 0);
+
+
+        PointsToSetInternal clzObjs = args.get(0);
+        PointsToSetInternal mObjs = mVarNode.makeP2Set();
+        PointsToSetInternal mNameObjs = args.get(1);
+
+
+        clzObjs.forall(new P2SetVisitor() {
+            @Override
+            public void visit(Node n) {
+                SootClass possibleSootClass = CSObjs.toClass(n);
+                String possibleClassName = possibleSootClass != null ? possibleSootClass.getName() : null;
+                // if c-=c^t and o_iString belongsto SC
+                mNameObjs.forall(new P2SetVisitor() {
+                    @Override
+                    public void visit(Node n) {
+                        String mName = CSObjs.toString(n);
+                        // if c− = ct ∧ o_i^String \belongs SC
+                        UJMethod ujMethod = new UJMethod(pag,
+                                possibleClassName, UJMethod.UNKNOWN_STRING,
+                                mName, UJMethod.UNKNOWN_LIST);
+                        mObjs.add(ujMethod);
+                    }
+                });
+            }
+        });
+        if (!mObjs.getNewSet().isEmpty()) {
+            propagator.addVarNodeToWorkList(mVarNode);
+        }
+    }
 
     public boolean isRelevantVar(VarNode var) {
         return relevantVars.containsKey(var);
@@ -284,6 +529,65 @@ public class MyReflectionModel implements ReflectionModel {
             }
         }
         return container;
+    }
+
+
+    public MyReflectionModel setPropagator(PropSolar propagator) {
+        this.propagator = propagator;
+        return this;
+    }
+
+    /**
+     * 得到参数
+     * For invocation r = v.foo(a0, a1, ..., an);
+     * when points-to set of v or any ai (0 <= i <= n) changes,
+     * this convenient method returns points-to sets relevant arguments.
+     * For case v/ai == csVar.getVar(), this method returns pts,
+     * otherwise, it just returns current points-to set of v/ai.
+     * 获取一个方法调用中v a0、、an其中一份的pointToSet
+     *
+     * @param pts        changed part of csVar
+     * @param indexes    indexes of the relevant arguments
+     * @param container  容器
+     * @param varNode    var节点
+     * @param invokeExpr 调用expr
+     * @return {@link List}<{@link PointsToSet}>
+     */
+    protected List<PointsToSetInternal> getArgs(SootMethod container,
+            VarNode varNode, PointsToSetInternal pts, InvokeExpr invokeExpr, int... indexes) {
+        List<PointsToSetInternal> args = new ArrayList<>(indexes.length);
+        for (int i : indexes) {
+            VarNode arg = getArg(container, invokeExpr, i);
+            if (arg.equals(varNode)) {
+                args.add(pts);
+            } else {
+                args.add(arg.makeP2Set());
+            }
+        }
+        return args;
+    }
+
+
+    public void calculatePossibleArrayElementTypes(PointsToSetInternal argsObjs, List<Integer> argsLengths, List<String> arrayTypes) {
+        argsObjs.forall(new P2SetVisitor() {
+            @Override
+            public void visit(Node n) {
+                if (CSObjs.isArrayAllocNode(n)) {
+                    argsLengths.add(CSObjs.getArrayLength(n));
+                    AllocNode arrayAllocNode = (AllocNode) n;
+                    arrayAllocNode.getFields().forEach(field -> {
+                        field.makeP2Set().forall(new P2SetVisitor() {
+                            @Override
+                            public void visit(Node n) {
+                                if (n instanceof AllocNode) {
+                                    arrayTypes.addAll(SootUtil.getInstance().getThisAndAllSuperClasses(n.getType().toString()));
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+        });
     }
 
 }

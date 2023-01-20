@@ -22,8 +22,17 @@
 
 package soot.jimple.spark.solver.myreflection.utils;
 
+import soot.ArrayType;
+import soot.Scene;
+import soot.SootClass;
+import soot.Value;
+import soot.jimple.IntConstant;
+import soot.jimple.internal.JNewArrayExpr;
+import soot.jimple.spark.pag.AllocNode;
+import soot.jimple.spark.pag.ClassConstantNode;
 import soot.jimple.spark.pag.Node;
 import soot.jimple.spark.pag.StringConstantNode;
+import soot.jimple.spark.solver.myreflection.MyReflectionModel;
 
 public class CSObjs {
 
@@ -34,5 +43,33 @@ public class CSObjs {
         else {
             return null;
         }
+    }
+
+    public static SootClass toClass(Node obj) {
+        if (obj instanceof ClassConstantNode) {
+            return Scene.v().getSootClassUnsafe(((ClassConstantNode) obj).getClassConstant().value);
+        }
+
+        return null;
+    }
+
+
+    public static boolean isUnknownClassObj(Node n) {
+        return n instanceof StringConstantNode && ((StringConstantNode) n).getString().equals(MyReflectionModel.UNKNOWN_CLASS);
+    }
+
+    public static boolean isArrayAllocNode(Node n) {
+        return n instanceof AllocNode && n.getType() instanceof ArrayType;
+
+    }
+
+    public static int getArrayLength(Node n) {
+        if (!isArrayAllocNode(n)) {
+            return -1;
+        }
+        AllocNode n1 = (AllocNode) n;
+        JNewArrayExpr newExpr = (JNewArrayExpr) n1.getNewExpr();
+        IntConstant size = (IntConstant) newExpr.getSize();
+        return size.value;
     }
 }
