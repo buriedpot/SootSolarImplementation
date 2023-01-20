@@ -1,6 +1,17 @@
 [![Build Status](https://github.com/soot-oss/soot/workflows/Soot%20CI/badge.svg?branch=develop)](https://github.com/soot-oss/soot/actions)
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/soot-oss/soot) 
 
+
+
+# 新增代码主要位于soot.jimple.spark.solver.myreflection包下 
+# 可重点关注soot.jimple.spark.solver.myreflection.MyReflectionModel类的实现
+目前已通过 Inheritance
+       DuplicateName
+        ArgsRefine
+        Basic测试用例。
+
+ 
+
 # Using Soot? Let us know about it!
 We are regularly applying for funding to help us maintain Soot. You can help us immensely by letting us know about [**projects that use Soot**](https://github.com/soot-oss/soot/wiki/Users-of-Soot), both commercially or in the form of research tools.
 
