@@ -39,15 +39,17 @@ public class CSObjs {
     public static String toString(Node obj) {
         if (obj instanceof StringConstantNode) {
             return ((StringConstantNode) obj).getString();
-        }
-        else {
+        } else {
             return null;
         }
     }
 
     public static SootClass toClass(Node obj) {
         if (obj instanceof ClassConstantNode) {
-            return Scene.v().getSootClassUnsafe(((ClassConstantNode) obj).getClassConstant().value);
+            return Scene.v().getSootClassUnsafe(
+                    SootUtil.getInstance().bytecodeClassName2SootStyleClassName(
+                            ((ClassConstantNode) obj).getClassConstant().value)
+            );
         }
 
         return null;

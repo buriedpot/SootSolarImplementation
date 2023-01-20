@@ -77,8 +77,7 @@ public class SootUtil {
                     }
                     currentSootClass = currentSootClass.getSuperclassUnsafe();
                 }
-            }
-            else {
+            } else {
                 String currentClass = ujMethod.declaringClass();
                 SootClass currentSootClass = Scene.v().getSootClass(currentClass);
                 while (currentSootClass != null) {
@@ -118,8 +117,6 @@ public class SootUtil {
         return true;
 
     }
-
-
 
 
     /**
@@ -173,18 +170,18 @@ public class SootUtil {
      */
     public List<String> getMethodInvokeCastTargetClass(SootMethod container, Value val) {
         return container.retrieveActiveBody().getUnits().stream().filter(stmt -> {
-            if (stmt instanceof JAssignStmt) {
-                JAssignStmt jAssignStmt = (JAssignStmt) stmt;
-                Value rightOp = jAssignStmt.getRightOp();
-                if (rightOp instanceof JCastExpr) {
-                    JCastExpr jCastExpr = (JCastExpr) rightOp;
-                    if (jCastExpr.getOp().equals(val)) {
-                        return true;
+                    if (stmt instanceof JAssignStmt) {
+                        JAssignStmt jAssignStmt = (JAssignStmt) stmt;
+                        Value rightOp = jAssignStmt.getRightOp();
+                        if (rightOp instanceof JCastExpr) {
+                            JCastExpr jCastExpr = (JCastExpr) rightOp;
+                            if (jCastExpr.getOp().equals(val)) {
+                                return true;
+                            }
+                        }
                     }
-                }
-            }
-            return false;
-        }).map(stmt -> ((JCastExpr) ((JAssignStmt) stmt).getRightOp()).getCastType().toString())
+                    return false;
+                }).map(stmt -> ((JCastExpr) ((JAssignStmt) stmt).getRightOp()).getCastType().toString())
                 .collect(Collectors.toList());
     }
 
@@ -279,6 +276,45 @@ public class SootUtil {
 
                 ).collect(Collectors.toSet()).isEmpty()
         ).map(SootClass::getName).collect(Collectors.toSet());
+
+    }
+
+    /**
+     * 字节码类name2烟尘样式类名
+     *
+     * @return {@link String}
+     */
+    public String bytecodeClassName2SootStyleClassName(String bytecodeClassName) {
+        if (bytecodeClassName == null || bytecodeClassName.length() == 0) {
+            return bytecodeClassName;
+        }
+        char startSymbol = bytecodeClassName.charAt(0);
+        int arrayDimension = 0;
+        String basicType = null;
+        int i = 0;
+        String arrString = "";
+
+        for (i = 0; bytecodeClassName.charAt(i) == '['; i++, arrayDimension++) {
+            arrString += "[]";
+        }
+
+        switch (startSymbol) {
+            case 'Z': basicType = "boolean"; break;
+            case 'B': basicType = "byte"; break;
+            case 'C': basicType = "char"; break;
+            case 'D': basicType = "double"; break;
+            case 'F': basicType = "float"; break;
+            case 'I': basicType = "int"; break;
+            case 'J': basicType = "long"; break;
+            case 'S': basicType = "short"; break;
+            case 'V': basicType = "void"; break;
+            default: {
+                basicType = bytecodeClassName.substring(arrayDimension + 1, bytecodeClassName.length() - 1).replace("/", ".");
+                break;
+            }
+        }
+
+        return basicType + arrString;
 
     }
 

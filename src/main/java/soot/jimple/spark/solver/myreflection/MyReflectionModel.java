@@ -37,6 +37,7 @@ import soot.jimple.toolkits.callgraph.ReflectionModel;
 import soot.tagkit.Host;
 import soot.tagkit.LinkTag;
 import soot.tagkit.Tag;
+import soot.toDex.SootToDexUtils;
 import soot.util.HashMultiMap;
 import soot.util.MultiMap;
 import soot.util.queue.QueueReader;
@@ -122,7 +123,7 @@ public class MyReflectionModel implements ReflectionModel {
         registerRelevantVarIndexes(getMethod, BASE, 0);
 
         SootMethod methodInvoke = Scene.v().getMethod("<java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>");
-        registerRelevantVarIndexes(methodInvoke, BASE, 0);
+        registerRelevantVarIndexes(methodInvoke, BASE, 0, 1);
     }
 
     private void registerAPIHandler(SootMethod classForName, Object o) {
@@ -158,6 +159,15 @@ public class MyReflectionModel implements ReflectionModel {
                 for (int i : indexes) {
                     relevantVars.put(getArg(container, invokeExpr, i), stmt);
                 }
+            }
+            if (
+                    "<java.lang.String: void <init>(java.lang.String)>"
+                            .equals(target.getSignature())) {
+                InstanceInvokeExpr instanceInvokeExpr = (InstanceInvokeExpr) invokeExpr;
+                LocalVarNode to = pag.findLocalVarNode(instanceInvokeExpr.getBase());
+                LocalVarNode from = pag.findLocalVarNode(instanceInvokeExpr.getArgs().get(0));
+                pag.addSimpleEdge(from, to);
+                propagator.addVarNodeToWorkList(from);
             }
         }
     }
@@ -284,7 +294,7 @@ public class MyReflectionModel implements ReflectionModel {
                 if (leftOp != null) {
                     // {c^t} if o_i^String \belongs pt(cName)
                     // 这里ClassConstant
-                    AllocNode classObj = pag.makeClassConstantNode(ClassConstant.v(className));
+                    AllocNode classObj = pag.makeClassConstantNode(ClassConstant.v(SootToDexUtils.getDexClassName(className)));
                     //  CSObj csObj = csManager.getCSObj(defaultHctx, clsObj);
                     LocalVarNode clzVarNode = pag.findLocalVarNode(leftOp);
                     clzVarNode.makeP2Set().getNewSet().add(classObj);
@@ -370,7 +380,7 @@ public class MyReflectionModel implements ReflectionModel {
                                 recvObjs.forall(new P2SetVisitor() {
                                     @Override
                                     public void visit(Node n) {
-                                        edges.add(new Edge(container, stmt, possibleTarget, Kind.VIRTUAL));
+                                        addReflectiveCallEdge(container, stmt, possibleTarget, Kind.VIRTUAL, n);
                                     }
                                 });
                             }
@@ -588,6 +598,18 @@ public class MyReflectionModel implements ReflectionModel {
                 }
             }
         });
+    }
+
+    private void addReflectiveCallEdge(SootMethod container, Stmt stmt, SootMethod target, Kind kind, Node recvObj) {
+        if (!target.isConstructor() && !target.isStatic()) {
+            assert recvObj != null;
+            target = Scene.v().getFastHierarchy().resolveConcreteDispatch(Scene.v().getSootClassUnsafe(recvObj.getType().toString()),
+                    target);
+            if (target == null) {
+                return;
+            }
+        }
+        edges.add(new Edge(container, stmt, target, kind));
     }
 
 }

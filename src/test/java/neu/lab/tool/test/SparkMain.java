@@ -28,7 +28,12 @@ import soot.jimple.toolkits.callgraph.CallGraph;
 public class SparkMain {
     public static void main(String[] args) {
 
-        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\Basic");
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\UnknownClassName");
+        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\RecvType"); // nott pass
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\Inheritance");
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\DuplicateName");
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\ArgsRefine");
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\Basic");
 //                        .deconstruct("C:\\Users\\buriedpot\\.m2\\repository\\org\\openscience\\cdk\\cdk-core\\2.7.1\\cdk-core-2.7.1.jar");
         System.out.println(result);
         // result.get("org.openscience.cdk.config.Isotopes")
