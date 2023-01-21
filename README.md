@@ -11,7 +11,7 @@
         Basic测试用例。
 测试入口在src/test/java/neu/lab/tool/test/SparkMain.java，看下注释。点击运行就可以在控制台查看打印结果。可进入各个函数定义查看理解。
 
-**主要困难**：目前在RecvType测试用例没法正常传播String对象。此外，没完全实现getMethods。
+**主要困难**：目前在RecvType测试用例没法正常传播String对象（当然，根据谭老师的要求，可能也不用传播String对象，对于Unknown的两个测试用例可以直接在类名或方法名未知的情况下进行推理。此外，没完全实现getMethods。因此剩余四个测试用例过不了。
 
  
 
