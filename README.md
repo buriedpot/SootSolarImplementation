@@ -5,6 +5,7 @@
 
 # 新增代码主要位于soot.jimple.spark.solver.myreflection包下 
 核心实现逻辑在soot.jimple.spark.solver.myreflection.MyReflectionModel类中
+其他相关的类有soot.jimple.spark.solver.PropSolar等（PropSolar就是复制了soot默认的PropWorklist然后稍作修改
 目前已通过 Inheritance
        DuplicateName
         ArgsRefine
