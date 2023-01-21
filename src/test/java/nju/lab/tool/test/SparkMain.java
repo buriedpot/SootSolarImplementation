@@ -20,9 +20,9 @@
  * #L%
  */
 
-package neu.lab.tool.test;
+package nju.lab.tool.test;
 
-import neu.lab.tool.soot.CgAna;
+import nju.lab.tool.soot.CgAna;
 import soot.jimple.toolkits.callgraph.CallGraph;
 
 public class SparkMain {

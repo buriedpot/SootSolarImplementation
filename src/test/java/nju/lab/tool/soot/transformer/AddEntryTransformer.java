@@ -20,7 +20,7 @@
  * #L%
  */
 
-package neu.lab.tool.soot.transformer;
+package nju.lab.tool.soot.transformer;
 
 import soot.EntryPoints;
 import soot.Scene;

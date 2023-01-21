@@ -20,7 +20,7 @@
  * #L%
  */
 
-package neu.lab.tool.soot;
+package nju.lab.tool.soot;
 
 import java.io.File;
 import java.util.ArrayList;

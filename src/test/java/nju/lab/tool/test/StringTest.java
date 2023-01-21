@@ -1,4 +1,4 @@
-package neu.lab.tool.test;
+package nju.lab.tool.test;
 
 
 import org.junit.Test;

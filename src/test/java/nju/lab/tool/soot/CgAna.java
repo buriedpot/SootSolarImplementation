@@ -21,7 +21,7 @@
  */
 
 
-package neu.lab.tool.soot;
+package nju.lab.tool.soot;
 
 import soot.Scene;
 import soot.jimple.toolkits.callgraph.CallGraph;
