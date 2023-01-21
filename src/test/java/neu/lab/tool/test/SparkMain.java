@@ -27,14 +27,15 @@ import soot.jimple.toolkits.callgraph.CallGraph;
 
 public class SparkMain {
     public static void main(String[] args) {
+        //任意取消掉其中一行的注释，可在控制台查看调用图打印结果
+        // 行尾not pass代表此测试用例没有通过
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/Inheritance").getPath());
+        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/DuplicateName").getPath());
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/ArgsRefine").getPath());
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/Basic").getPath());
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/UnknownClassName").getPath()); // not pass
+//        CallGraph result = CgAna.getInstance().generateCallGraphSpark(SparkMain.class.getClassLoader().getResource("myreflection/RecvType").getPath()); // nott pass
 
-//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\UnknownClassName");
-        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\RecvType"); // nott pass
-//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\Inheritance");
-//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\DuplicateName");
-//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\ArgsRefine");
-//        CallGraph result = CgAna.getInstance().generateCallGraphSpark("C:\\Works\\javaworks\\soot\\src\\test\\resources\\myreflection\\Basic");
-//                        .deconstruct("C:\\Users\\buriedpot\\.m2\\repository\\org\\openscience\\cdk\\cdk-core\\2.7.1\\cdk-core-2.7.1.jar");
         System.out.println(result);
         // result.get("org.openscience.cdk.config.Isotopes")
     }

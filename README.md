@@ -9,7 +9,7 @@
        DuplicateName
         ArgsRefine
         Basic测试用例。
-测试入口在src/test/java/neu/lab/tool/test/SparkMain.java，可进入各个函数定义阅读理解。
+测试入口在src/test/java/neu/lab/tool/test/SparkMain.java，看下注释。点击运行就可以在控制台查看打印结果。可进入各个函数定义查看理解。
 
 **主要困难**：目前在RecvType测试用例没法正常传播String对象。此外，没完全实现getMethods。
 
