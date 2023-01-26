@@ -1,19 +1,36 @@
 [![Build Status](https://github.com/soot-oss/soot/workflows/Soot%20CI/badge.svg?branch=develop)](https://github.com/soot-oss/soot/actions)
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/soot-oss/soot) 
 
+# 实现截图
+* Basic
+![Basic](readmepngs/Basic.png)
+* ArgsRefine
+![ArgsRefine](readmepngs/ArgsRefine.png)
+* DuplicateName
+![DuplicateName](readmepngs/DuplicateName.png)
+* Inheritance
+![Inheritance](readmepngs/Inheritance.png)
 
+# 代码实现
+新增代码主要位于soot.jimple.spark.solver.myreflection包下 
 
-# 新增代码主要位于soot.jimple.spark.solver.myreflection包下 
-核心实现逻辑在soot.jimple.spark.solver.myreflection.MyReflectionModel类中
+核心实现逻辑在soot.jimple.spark.solver.myreflection.MyReflectionModel类中。
+
 其他相关的类有soot.jimple.spark.solver.PropSolar等（PropSolar就是复制了soot默认的PropWorklist然后稍作修改
-目前已通过 Inheritance
-       DuplicateName
-        ArgsRefine
-        Basic测试用例。
-测试入口在src/test/java/nju/lab/tool/test/SparkMain.java，看下注释。点击运行就可以在控制台查看打印结果。可进入各个函数定义查看理解。
-本实现使用Soot 4.2.1版本进行实现。主要是在soot develop分支最新的4.4.0-SNAPSHOT版本上写发现有bug。。。。
+目前已通过
+* Inheritance
+* DuplicateName
+* ArgsRefine
+* Basic
+  
+测试用例。
 
-**主要困难**：目前在RecvType测试用例没法正常传播String对象（当然，根据谭老师的要求，可能也不用传播String对象，对于Unknown的两个测试用例可以直接在类名或方法名未知的情况下进行推理。此外，没完全实现getMethods。因此剩余四个测试用例过不了。
+
+测试入口在src/test/java/nju/lab/tool/test/SparkMain.java，点击运行就可以在控制台查看打印结果，容易理解。
+
+本实现使用Soot 4.2.1版本进行实现。主要是在soot develop分支最新的4.4.0-SNAPSHOT版本上写发现有bug。
+
+**主要困难**：目前在RecvType测试用例没法正常传播String对象（根据谭老师的要求，可能也不用传播String对象，对于Unknown的两个测试用例可以直接在类名或方法名未知的情况下进行推理。此外，没完全实现getMethods。因此剩余四个测试用例过不了。
 
  
 
